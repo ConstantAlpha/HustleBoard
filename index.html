@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vault — Personal Finance Dashboard</title>
+<style>
+  :root{
+    --bg:#0a0d13; --panel:#11151e; --panel2:#0d1119; --border:#1e2634; --text:#e8edf5;
+    --muted:#8592a6; --accent:#6c8cff; --green:#34d399; --red:#f87171; --amber:#f7b955;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 560px at 12% -8%, rgba(108,140,255,.16), transparent 62%),
+      radial-gradient(900px 480px at 88% -4%, rgba(52,211,153,.10), transparent 58%),
+      var(--bg);
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  [hidden]{display:none !important}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 64px}
+
+  /* ---------- shared ---------- */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+  .card-head h2{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em}
+  .card-head p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+  .btn{
+    border:1px solid var(--border);background:var(--panel);color:var(--text);
+    font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:11px;
+    cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:hover{background:#161c28}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:linear-gradient(180deg,#6c8cff,#5570ea);border-color:#5570ea;color:#fff;box-shadow:0 10px 24px -12px rgba(108,140,255,1)}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:#fca5a5;border-color:#3a2229;background:#1a1216}
+  .btn.danger:hover{background:#241820}
+  .btn.block{width:100%}
+  .select-sm{
+    font:inherit;font-size:12.5px;font-weight:600;color:var(--text);background:var(--panel);
+    border:1px solid var(--border);border-radius:10px;padding:8px 10px;outline:none;cursor:pointer;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:11.5px;color:var(--muted);font-weight:600}
+  .field input,.field select,.field textarea{
+    width:100%;font:inherit;font-size:13.5px;color:var(--text);background:var(--panel2);
+    border:1px solid var(--border);border-radius:10px;padding:10px 12px;outline:none;transition:.15s;
+  }
+  .field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,140,255,.18)}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)}
+
+  /* ---------- brand ---------- */
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    font-size:17px;color:#fff;background:linear-gradient(140deg,#6c8cff,#8b5cf6 55%,#22d3ee);
+    box-shadow:0 10px 26px -8px rgba(108,140,255,.9);
+  }
+  .brand h1{margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em}
+  .brand p{margin:1px 0 0;font-size:12px;color:var(--muted)}
+
+  /* ---------- auth ---------- */
+  .auth-wrap{min-height:100vh;display:grid;place-items:center;padding:32px 20px}
+  .auth-card{width:min(410px,100%);padding:26px}
+  .auth-title{margin:0 0 18px;font-size:18px;font-weight:650;letter-spacing:-.02em}
+  .auth-error{
+    font-size:12.5px;color:#fca5a5;background:rgba(248,113,113,.1);
+    border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:9px 11px;margin-bottom:14px;
+  }
+  .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#4a5568;font-size:11.5px}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+  .demo-accounts{margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
+  .demo-accounts > p{margin:0 0 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .chips{display:flex;flex-direction:column;gap:6px}
+  .chip{
+    text-align:left;font:inherit;font-size:12px;color:var(--muted);background:var(--panel2);
+    border:1px solid var(--border);border-radius:9px;padding:8px 11px;cursor:pointer;transition:.15s;
+    font-variant-numeric:tabular-nums;
+  }
+  .chip:hover{color:var(--text);border-color:#2b3547;background:#151b26}
+  .auth-note{font-size:11px;color:#4a5568;line-height:1.6;margin:16px 0 0}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .topbar-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .monthnav{display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:4px}
+  .monthnav button{width:28px;height:28px;border:0;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;font-size:16px;line-height:1;transition:.15s}
+  .monthnav button:hover{background:rgba(255,255,255,.07);color:var(--text)}
+  #monthLabel{min-width:124px;text-align:center;font-size:13px;font-weight:600}
+  .user-chip{
+    display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--border);
+    border-radius:12px;padding:5px 12px 5px 5px;cursor:pointer;color:var(--text);font:inherit;transition:.15s;
+  }
+  .user-chip:hover{background:#161c28}
+  .avatar{
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:12.5px;font-weight:700;
+    color:#fff;background:linear-gradient(140deg,#6c8cff,#8b5cf6);flex:none;
+  }
+  .user-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.25}
+  .user-meta b{font-size:12.5px;font-weight:650}
+  .user-meta small{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  .role-badge{
+    font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    padding:2px 6px;border-radius:5px;vertical-align:middle;
+  }
+  .role-badge.admin{background:rgba(139,92,246,.18);color:#c4b5fd;border:1px solid rgba(139,92,246,.35)}
+  .role-badge.user{background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.3)}
+
+  /* ---------- kpis ---------- */
+  .kpis{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .kpi-label{font-size:12px;color:var(--muted);display:block;margin-bottom:8px}
+  .kpi-value{font-size:26px;font-weight:650;letter-spacing:-.02em;display:block;font-variant-numeric:tabular-nums}
+  .kpi-sub{font-size:12px;color:var(--muted);margin-top:6px;display:block}
+  .minibar{height:5px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:11px;overflow:hidden}
+  .minibar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#34d399,#22d3ee);transition:width .6s cubic-bezier(.2,.7,.3,1)}
+
+  /* ---------- rows ---------- */
+  .row2{display:grid;gap:14px;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);margin-top:14px}
+  .row3{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);margin-top:14px}
+  @media (max-width:900px){ .row2,.row3{grid-template-columns:minmax(0,1fr)} }
+
+  /* ---------- charts ---------- */
+  .legend-inline{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:2px}
+  .dot.green{background:var(--green)} .dot.red{background:var(--red)}
+  .chart-wrap{position:relative;height:272px;margin-top:10px}
+  #flowChart{width:100%;height:100%;display:block}
+  .tooltip{
+    position:absolute;transform:translateX(-50%);pointer-events:none;background:#0d1119;
+    border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:11.5px;min-width:132px;
+    box-shadow:0 14px 34px -12px rgba(0,0,0,.9);z-index:5;
+  }
+  .tooltip .tip-m{font-weight:650;margin-bottom:5px;font-size:12px}
+  .tooltip .tip-r{display:flex;align-items:center;gap:6px;color:var(--muted);line-height:1.7}
+  .tooltip .tip-r b{margin-left:auto;color:var(--text);font-variant-numeric:tabular-nums}
+  .donut-wrap{display:flex;justify-content:center;padding:8px 0 14px}
+  #donutChart{width:196px;height:196px;display:block}
+  .donut-legend{display:flex;flex-direction:column;gap:7px}
+  .lg-row{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:8px;font-size:12.5px}
+  .lg-dot{width:8px;height:8px;border-radius:3px}
+  .lg-name{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-val{font-variant-numeric:tabular-nums}
+  .lg-pct{color:var(--muted);font-size:11px;min-width:30px;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* ---------- budgets ---------- */
+  .budgets{display:flex;flex-direction:column;gap:15px;margin-top:14px}
+  .bud-top{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-bottom:7px}
+  .bud-top .of{color:var(--muted)}
+  .bar{height:7px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+  .bar-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.2,.7,.3,1)}
+
+  /* ---------- transactions ---------- */
+  .tx-tools{display:flex;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+  .tx-tools input,.tx-tools select{
+    font:inherit;font-size:12.5px;color:var(--text);background:var(--panel2);
+    border:1px solid var(--border);border-radius:9px;padding:8px 10px;outline:none;transition:.15s;
+  }
+  .tx-tools input{flex:1;min-width:130px}
+  .tx-tools input:focus,.tx-tools select:focus{border-color:var(--accent)}
+  .tx-list{margin-top:8px;max-height:322px;overflow-y:auto;padding-right:4px}
+  .tx-list::-webkit-scrollbar{width:6px}
+  .tx-list::-webkit-scrollbar-thumb{background:#222c3c;border-radius:99px}
+  .tx{display:grid;grid-template-columns:46px minmax(0,1fr) auto 56px;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid rgba(255,255,255,.045)}
+  .tx:last-child{border-bottom:none}
+  .tx-date{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .tx-main{display:flex;align-items:center;gap:8px;min-width:0}
+  .tx-desc{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx-cat{font-size:10.5px;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.06);color:var(--muted);white-space:nowrap;flex:none}
+  .tx-amt{font-size:13.5px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tx-actions{display:flex;gap:2px;justify-content:flex-end;opacity:0;transition:.15s}
+  .tx:hover .tx-actions{opacity:1}
+  .icon-btn{width:24px;height:24px;border:0;background:transparent;color:#5a6b86;cursor:pointer;border-radius:6px;font-size:13px;line-height:1;transition:.15s}
+  .icon-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+  .icon-btn.del:hover{background:rgba(248,113,113,.16);color:var(--red)}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:26px 0}
+
+  /* ---------- dialogs ---------- */
+  dialog{border:none;background:transparent;padding:0;color:var(--text);max-width:100vw}
+  dialog::backdrop{background:rgba(5,8,14,.72);backdrop-filter:blur(4px)}
+  .sheet{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;width:min(440px,92vw);box-shadow:0 40px 90px -30px #000;max-height:88vh;overflow-y:auto}
+  .sheet.wide{width:min(760px,94vw)}
+  .sheet h3{margin:0 0 4px;font-size:15px;font-weight:650}
+  .sheet .sub{margin:0 0 18px;font-size:12px;color:var(--muted)}
+  .sheet-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+  /* ---------- account / session ---------- */
+  .acct-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .acct-head .avatar{width:44px;height:44px;border-radius:13px;font-size:16px}
+  .acct-head h3{margin:0;font-size:15px}
+  .acct-head p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:12.5px;margin:14px 0}
+  .kv dt{color:var(--muted);white-space:nowrap}
+  .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;word-break:break-all}
+  .code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.65;
+    background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:11px;
+    white-space:pre-wrap;word-break:break-all;color:#9fb0c9;max-height:180px;overflow:auto;
+  }
+  details summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:600;padding:6px 0;user-select:none}
+  details summary:hover{color:var(--text)}
+
+  /* ---------- admin table ---------- */
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);font-weight:700}
+  .tbl td{padding:10px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .u-cell{display:flex;align-items:center;gap:9px}
+  .tbl .avatar{width:26px;height:26px;border-radius:8px;font-size:11px}
+  .tbl select{font-size:11.5px;padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);cursor:pointer;outline:none}
+  .log-list{display:flex;flex-direction:column;gap:1px;max-height:300px;overflow-y:auto;margin-top:6px}
+  .log-row{display:grid;grid-template-columns:64px 1fr;gap:10px;font-size:11.5px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .log-time{color:#5a6b86;font-variant-numeric:tabular-nums}
+  .log-body b{color:var(--text);font-weight:650}
+  .log-body span{color:var(--muted)}
+  .log-body .deny{color:#fca5a5}
+
+  /* ---------- payment ---------- */
+  .pay-summary{display:flex;justify-content:space-between;align-items:baseline;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:18px}
+  .pay-summary .lbl{font-size:11.5px;color:var(--muted)}
+  .pay-summary .amt{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+  .card-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stripe-note{font-size:11px;color:#4a5568;line-height:1.6;margin-top:14px}
+  .stripe-note code{color:#7d8ca3;background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:10.5px}
+  .pay-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:16px 0;gap:12px}
+  .spinner{width:30px;height:30px;border-radius:50%;border:3px solid rgba(108,140,255,.22);border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .pay-ok{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:rgba(52,211,153,.14);color:var(--green);border:1px solid rgba(52,211,153,.35)}
+  .pay-bad{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:rgba(248,113,113,.14);color:var(--red);border:1px solid rgba(248,113,113,.35)}
+
+  /* ---------- toasts ---------- */
+  .toast-stack{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:9px;z-index:9999;pointer-events:none}
+  .toast{
+    background:#141a25;border:1px solid var(--border);border-left:3px solid var(--accent);
+    border-radius:11px;padding:11px 15px;font-size:12.5px;max-width:330px;
+    box-shadow:0 20px 44px -18px #000;animation:slidein .25s ease;pointer-events:auto;
+  }
+  .toast.ok{border-left-color:var(--green)} .toast.err{border-left-color:var(--red)} .toast.warn{border-left-color:var(--amber)}
+  .toast.out{opacity:0;transform:translateY(6px);transition:.28s}
+  @keyframes slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .footer{margin-top:26px;text-align:center;font-size:11.5px;color:#4a5568}
+  .footer button{background:none;border:none;color:#5a6b86;font:inherit;cursor:pointer;text-decoration:underline}
+  .footer button:hover{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ============================ AUTH VIEW ============================ -->
+<div id="authView" class="auth-wrap">
+  <div class="auth-card card">
+    <div class="brand" style="margin-bottom:24px">
+      <div class="logo">◈</div>
+      <div><h1>Vault</h1><p>Personal finance dashboard</p></div>
+    </div>
+
+    <h2 class="auth-title">Sign in to your account</h2>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" required autocomplete="username" placeholder="you@vault.app" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <div class="auth-error" id="authError" hidden></div>
+      <button class="btn primary block" type="submit" id="loginBtn">Sign in</button>
+    </form>
+
+    <div class="divider"><span>or</span></div>
+
+    <button class="btn block" id="googleBtn" type="button">
+      <svg width="15" height="15" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v9h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.4z"/>
+        <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.2v5.7C7.8 41.1 15.3 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.6 28.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.2C2.8 17.1 2 20.4 2 24s.8 6.9 2.2 9.8l7.4-5.7z"/>
+        <path fill="#EA4335" d="M24 10.8c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.2 30 2 24 2 15.3 2 7.8 6.9 4.2 14.2l7.4 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <div class="demo-accounts">
+      <p>Demo accounts — click to fill</p>
+      <div class="chips">
+        <button type="button" class="chip" data-email="admin@vault.app" data-pw="admin123">Admin · admin@vault.app / admin123</button>
+        <button type="button" class="chip" data-email="alex@vault.app"  data-pw="alex123">User · alex@vault.app / alex123</button>
+        <button type="button" class="chip" data-email="sam@vault.app"   data-pw="sam123">User · sam@vault.app / sam123</button>
+      </div>
+    </div>
+
+    <p class="auth-note">
+      Sessions are issued as HS256 JWTs signed with the Web Crypto API and verified on every load.
+      Authentication here is a browser-side simulation for demo purposes — never ship this pattern to production.
+    </p>
+  </div>
+</div>
+
+<!-- ============================ APP VIEW ============================ -->
+<div id="appView" class="wrap" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div><h1>Vault</h1><p id="brandSub">Personal finance dashboard</p></div>
+    </div>
+
+    <div class="topbar-actions">
+      <select id="userSwitch" class="select-sm" hidden title="View another user's data (admin only)"></select>
+
+      <div class="monthnav">
+        <button id="prevMonth" aria-label="Previous month">‹</button>
+        <span id="monthLabel">—</span>
+        <button id="nextMonth" aria-label="Next month">›</button>
+      </div>
+
+      <button class="btn" id="payBillBtn" type="button">💳 Pay a bill</button>
+      <button class="btn primary" id="openDialog" type="button">+ Add transaction</button>
+
+      <button class="user-chip" id="accountBtn" type="button">
+        <span class="avatar" id="avatar">?</span>
+        <span class="user-meta">
+          <b id="userName">—</b>
+          <small id="userRole">—</small>
+        </span>
+      </button>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="card">
+      <span class="kpi-label">Total balance</span>
+      <span class="kpi-value" id="kpiBalance">$0</span>
+      <span class="kpi-sub" id="kpiBalanceSub">net across all activity</span>
+    </div>
+    <div class="card">
+      <span class="kpi-label">Income this month</span>
+      <span class="kpi-value green" id="kpiIncome">$0</span>
+      <span class="kpi-sub" id="kpiIncomeSub">—</span>
+    </div>
+    <div class="card">
+      <span class="kpi-label">Expenses this month</span>
+      <span class="kpi-value red" id="kpiExpense">$0</span>
+      <span class="kpi-sub" id="kpiExpenseSub">—</span>
+    </div>
+    <div class="card">
+      <span class="kpi-label">Savings rate</span>
+      <span class="kpi-value" id="kpiRate">0%</span>
+      <div class="minibar"><i id="kpiRateBar" style="width:0%"></i></div>
+    </div>
+  </section>
+
+  <section class="row2">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Cash flow</h2><p>Last 6 months</p></div>
+        <div class="legend-inline">
+          <span class="dot green"></span>Income
+          <span class="dot red" style="margin-left:8px"></span>Expenses
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="flowChart"></canvas>
+        <div class="tooltip" id="flowTip" hidden></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Spending</h2><p>By category</p></div></div>
+      <div class="donut-wrap"><canvas id="donutChart"></canvas></div>
+      <div class="donut-legend" id="donutLegend"></div>
+    </div>
+  </section>
+
+  <section class="row3">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Budgets</h2><p id="budgetSub">Monthly limits</p></div>
+        <button class="btn ghost" id="editBudgetsBtn" type="button" style="font-size:11.5px;padding:6px 10px" hidden>Edit</button>
+      </div>
+      <div class="budgets" id="budgets"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div><h2>Transactions</h2><p id="txCount">—</p></div></div>
+      <div class="tx-tools">
+        <input id="txSearch" type="search" placeholder="Search description…" autocomplete="off">
+        <select id="txFilter"><option value="">All categories</option></select>
+      </div>
+      <div class="tx-list" id="txList"></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Signed in as <b id="footerEmail">—</b> · data persists in localStorage ·
+    <button id="signOutInline">sign out</button>
+  </div>
+</div>
+
+<!-- ============================ DIALOGS ============================ -->
+
+<!-- Add / edit transaction -->
+<dialog id="txDialog">
+  <form class="sheet" id="txForm">
+    <h3 id="txDialogTitle">Add transaction</h3>
+    <p class="sub" id="txDialogSub">Record money coming in or going out.</p>
+
+    <div class="field">
+      <label for="txDesc">Description</label>
+      <input id="txDesc" required maxlength="40" placeholder="e.g. Coffee with Sam" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="txAmount">Amount (USD)</label>
+        <input id="txAmount" type="number" min="0.01" step="0.01" required placeholder="0.00">
+      </div>
+      <div class="field">
+        <label for="txDate">Date</label>
+        <input id="txDate" type="date" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="txCat">Category</label>
+      <select id="txCat"></select>
+    </div>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="cancelTx">Cancel</button>
+      <button type="submit" class="btn primary" id="saveTxBtn">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Edit budgets (admin only) -->
+<dialog id="budgetDialog">
+  <form class="sheet" id="budgetForm">
+    <h3>Edit budgets</h3>
+    <p class="sub">Monthly limits for <b id="budgetOwner">—</b>.</p>
+    <div id="budgetFields"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="cancelBudgets">Cancel</button>
+      <button type="submit" class="btn primary">Save budgets</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Account / session -->
+<dialog id="accountDialog">
+  <div class="sheet">
+    <div class="acct-head">
+      <span class="avatar" id="acctAvatar">?</span>
+      <div>
+        <h3 id="acctName">—</h3>
+        <p id="acctEmail">—</p>
+      </div>
+    </div>
+
+    <dl class="kv">
+      <dt>Role</dt><dd id="acctRole">—</dd>
+      <dt>User ID</dt><dd id="acctId">—</dd>
+      <dt>Token expires</dt><dd id="acctExp">—</dd>
+    </dl>
+
+    <details>
+      <summary>Decoded JWT payload</summary>
+      <div class="code" id="acctPayload">—</div>
+    </details>
+    <details style="margin-top:4px">
+      <summary>Raw access token</summary>
+      <div class="code" id="acctToken">—</div>
+    </details>
+
+    <div class="sheet-actions" style="justify-content:space-between">
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn ghost" id="openAdminBtn" hidden>Admin panel</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn ghost" id="closeAccount">Close</button>
+        <button type="button" class="btn danger" id="signOutBtn">Sign out</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Admin panel -->
+<dialog id="adminDialog">
+  <div class="sheet wide">
+    <h3>Admin panel</h3>
+    <p class="sub">Manage users, roles, and review the security audit log.</p>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>User</th><th>Email</th><th>Role</th><th>Txns</th><th>Balance</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="adminUserRows"></tbody>
+    </table>
+
+    <details style="margin-top:20px" open>
+      <summary>Audit log</summary>
+      <div class="log-list" id="auditList"></div>
+    </details>
+
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="closeAdmin">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Stripe payment -->
+<dialog id="payDialog">
+  <div class="sheet" id="paySheet">
+    <h3>Pay a bill</h3>
+    <p class="sub">Test-mode card payment via Stripe.</p>
+
+    <div class="pay-summary">
+      <span class="lbl">Amount due</span>
+      <span class="amt" id="payAmountLabel">$0.00</span>
+    </div>
+
+    <form id="payForm">
+      <div class="field">
+        <label for="payDesc">What are you paying for?</label>
+        <input id="payDesc" required maxlength="40" placeholder="e.g. Electricity bill" value="Utilities bill">
+      </div>
+      <div class="field">
+        <label for="payAmt">Amount (USD)</label>
+        <input id="payAmt" type="number" min="1" step="0.01" required value="84.50">
+      </div>
+
+      <div id="cardFields">
+        <div class="field">
+          <label for="cardNumber">Card number</label>
+          <input id="cardNumber" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19" autocomplete="cc-number">
+        </div>
+        <div class="card-row">
+          <div class="field">
+            <label for="cardExp">Expiry</label>
+            <input id="cardExp" inputmode="numeric" placeholder="MM / YY" maxlength="7" autocomplete="cc-exp">
+          </div>
+          <div class="field">
+            <label for="cardCvc">CVC</label>
+            <input id="cardCvc" inputmode="numeric" placeholder="123" maxlength="4" autocomplete="cc-csc">
+          </div>
+        </div>
+      </div>
+
+      <div id="stripeElementMount"></div>
+
+      <p class="stripe-note" id="stripeNote"></p>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="cancelPay">Cancel</button>
+        <button type="submit" class="btn primary" id="paySubmitBtn">Pay now</button>
+      </div>
+    </form>
+
+    <div id="payState" hidden></div>
+  </div>
+</dialog>
+
+<div id="toasts" class="toast-stack"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ==========================================================
+     0. Constants & tiny helpers
+     ========================================================== */
+  const DB_KEY      = "vault-db-v4";
+  const SESSION_KEY = "vault-session-v4";
+  const STRIPE_PK_KEY = "vault-stripe-pk";
+
+  const CATS = {
+    Housing:   { color: "#7c9cff", kind: "expense" },
+    Food:      { color: "#f7b955", kind: "expense" },
+    Transport: { color: "#4fd1c5", kind: "expense" },
+    Shopping:  { color: "#f472b6", kind: "expense" },
+    Bills:     { color: "#a78bfa", kind: "expense" },
+    Health:    { color: "#34d399", kind: "expense" },
+    Fun:       { color: "#fb923c", kind: "expense" },
+    Salary:    { color: "#22d3ee", kind: "income"  },
+    Freelance: { color: "#818cf8", kind: "income"  }
+  };
+  const EXPENSE_CATS = Object.keys(CATS).filter(c => CATS[c].kind === "expense");
+
+  const DEFAULT_BUDGETS = { Housing:1500, Food:550, Transport:200, Shopping:300, Bills:250, Health:150, Fun:200 };
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const MSHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const $  = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+  const rid = () => Math.random().toString(36).slice(2, 10);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const money = (n, d = 0) => Number(n).toLocaleString("en-US", { style:"currency", currency:"USD", minimumFractionDigits:d, maximumFractionDigits:d });
+  const compact = (n) => n >= 1000 ? "$" + (n/1000 >= 10 ? Math.round(n/1000) : (n/1000).toFixed(1).replace(/\.0$/,"")) + "k" : "$" + Math.round(n);
+  const keyOf = (y, m) => `${y}-${String(m + 1).padStart(2, "0")}`;
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function toast(msg, kind = "info") {
+    const el = document.createElement("div");
+    el.className = "toast " + kind;
+    el.textContent = msg;
+    $("#toasts").appendChild(el);
+    setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 300); }, 3200);
+  }
+
+  /* ==========================================================
+     1. Crypto — base64url, HMAC-SHA256, JWT sign/verify
+     ========================================================== */
+  const HAS_SUBTLE = !!(globalThis.crypto && globalThis.crypto.subtle);
+  const JWT_SECRET = "vault-demo-hs256-secret-do-not-ship-to-production";
+
+  const B64 = {
+    fromBytes(bytes) {
+      let bin = "";
+      for (const b of bytes) bin += String.fromCharCode(b);
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    },
+    toBytes(str) {
+      let s = str.replace(/-/g, "+").replace(/_/g, "/");
+      while (s.length % 4) s += "=";
+      const bin = atob(s);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    },
+    fromStr(str) { return B64.fromBytes(new TextEncoder().encode(str)); },
+    toStr(b64)   { return new TextDecoder().decode(B64.toBytes(b64)); }
+  };
+
+  /* Deterministic fallback hash used only if Web Crypto is unavailable. */
+  function fnv1a(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0").repeat(8);
+  }
+
+  async function hmacSign(data, secret) {
+    if (HAS_SUBTLE) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey("raw", enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+      return B64.fromBytes(new Uint8Array(sig));
+    }
+    return B64.fromStr(fnv1a(data + "::" + secret));
+  }
+
+  async function hashPassword(password, salt) {
+    const material = `${salt}:${password}:vault`;
+    if (HAS_SUBTLE) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(material));
+      return B64.fromBytes(new Uint8Array(buf));
+    }
+    return B64.fromStr(fnv1a(material));
+  }
+
+  async function signJWT(payload) {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: "HS256", typ: "JWT" };
+    const body = { ...payload, iat: now, exp: now + 3600, jti: rid() };
+    const data = B64.fromStr(JSON.stringify(header)) + "." + B64.fromStr(JSON.stringify(body));
+    const sig = await hmacSign(data, JWT_SECRET);
+    return { token: data + "." + sig, payload: body };
+  }
+
+  async function verifyJWT(token) {
+    const parts = String(token).split(".");
+    if (parts.length !== 3) throw new Error("Malformed token");
+    const data = parts[0] + "." + parts[1];
+    const expected = await hmacSign(data, JWT_SECRET);
+    if (expected !== parts[2]) throw new Error("Invalid signature");
+    const payload = JSON.parse(B64.toStr(parts[1]));
+    if (!payload.exp || payload.exp * 1000 < Date.now()) throw new Error("Token expired");
+    return payload;
+  }
+
+  /* ==========================================================
+     2. Persistence & seed data
+     ========================================================== */
+  let DB = null;
+
+  function persist() {
+    try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch (e) { console.warn("persist failed", e); }
+  }
+
+  /* Deterministic pseudo-random transaction generator, per seed. */
+  function seedTransactions(seed) {
+    let s = (seed >>> 0) || 1;
+    const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const between = (a, b) => a + rnd() * (b - a);
+    const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+
+    const out = [];
+    const today = new Date();
+
+    for (let back = 7; back >= 0; back--) {
+      const base = new Date(today.getFullYear(), today.getMonth() - back, 1);
+      const y = base.getFullYear(), m = base.getMonth();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const cap = back === 0 ? today.getDate() : daysInMonth;
+
+      const push = (day, desc, category, amount) => {
+        if (day > cap) return;
+        out.push({
+          id: rid(),
+          date: `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+          desc, category,
+          amount: Math.round(amount * 100) / 100
+        });
+      };
+
+      push(1, "Monthly salary", "Salary", between(4200, 4750));
+      if (rnd() > 0.45) push(Math.floor(between(8, 24)), "Freelance project", "Freelance", between(400, 1400));
+
+      push(2, "Rent", "Housing", 1450);
+      push(5, "Electricity", "Bills", between(58, 122));
+      push(12, "Internet", "Bills", 55);
+      push(18, "Phone plan", "Bills", 35);
+
+      const nFood = 10 + Math.floor(rnd() * 5);
+      for (let i = 0; i < nFood; i++)
+        push(1 + Math.floor(rnd() * 28),
+          pick(["Groceries","Morning coffee","Lunch","Dinner out","Bakery","Takeout"]),
+          "Food", between(8, 78));
+
+      for (let i = 0; i < 6; i++)
+        push(1 + Math.floor(rnd() * 28),
+          pick(["Metro card","Ride share","Fuel","Parking","Train ticket"]),
+          "Transport", between(7, 46));
+
+      for (let i = 0; i < 2 + Math.floor(rnd() * 2); i++)
+        push(1 + Math.floor(rnd() * 28),
+          pick(["Sneakers","Bookstore","Home goods","Online order","Gift"]),
+          "Shopping", between(24, 220));
+
+      for (let i = 0; i < Math.floor(rnd() * 3); i++)
+        push(1 + Math.floor(rnd() * 28),
+          pick(["Pharmacy","Dentist","Gym membership"]),
+          "Health", between(18, 120));
+
+      for (let i = 0; i < 2 + Math.floor(rnd() * 3); i++)
+        push(1 + Math.floor(rnd() * 28),
+          pick(["Cinema","Streaming","Concert","Game night","Brunch"]),
+          "Fun", between(12, 92));
+    }
+    return out;
+  }
+
+  const SEED_USERS = [
+    { id: "u_admin", email: "admin@vault.app", name: "Riley Admin", role: "admin", pw: "admin123" },
+    { id: "u_alex",  email: "alex@vault.app",  name: "Alex Chen",   role: "user",  pw: "alex123"  },
+    { id: "u_sam",   email: "sam@vault.app",   name: "Sam Rivera",  role: "user",  pw: "sam123"   }
+  ];
+
+  async function ensureDB() {
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) {
+      try { DB = JSON.parse(raw); if (DB && Array.isArray(DB.users)) return; } catch {}
+    }
+
+    const users = [];
+    const transactions = {};
+    const budgets = {};
+    const seeds = { u_admin: 1111, u_alex: 2222, u_sam: 3333 };
+
+    for (const u of SEED_USERS) {
+      const salt = rid() + rid();
+      users.push({
+        id: u.id, email: u.email, name: u.name, role: u.role,
+        salt, pwHash: await hashPassword(u.pw, salt),
+        createdAt: new Date().toISOString()
+      });
+      transactions[u.id] = seedTransactions(seeds[u.id]);
+      budgets[u.id] = { ...DEFAULT_BUDGETS };
+    }
+
+    DB = { users, transactions, budgets, audit: [] };
+    persist();
+  }
+
+  /* ==========================================================
+     3. Session state & authorization
+     ========================================================== */
+  let SESSION = null;                    // { token, payload }
+  let VIEW = { userId: null, y: 0, m: 0 }; // which user's data is on screen
+
+  const now = new Date();
+  VIEW.y = now.getFullYear();
+  VIEW.m = now.getMonth();
+
+  const findUser  = (id) => DB.users.find(u => u.id === id) || null;
+  const selfUser  = () => SESSION ? findUser(SESSION.payload.sub) : null;
+  const isAdmin   = () => !!selfUser() && selfUser().role === "admin";
+  const viewUser  = () => findUser(VIEW.userId);
+  const txOf      = (uid) => DB.transactions[uid] || [];
+  const budgetOf  = (uid) => DB.budgets[uid] || {};
+
+  /**
+   * Central RBAC gate. Admins may act on anyone; users only on themselves.
+   * Denials are written to the audit log so admins can see attempted escalations.
+   */
+  function authorize(action, ownerId, { silent = false } = {}) {
+    const me = selfUser();
+    if (!me) { signOut("Session ended"); return false; }
+    const allowed = me.role === "admin" || me.id === ownerId;
+    if (!allowed) {
+      audit("DENIED", `${action} on ${findUser(ownerId)?.email ?? ownerId}`, "denied");
+      if (!silent) toast("Access denied — you can only modify your own data.", "err");
+    }
+    return allowed;
+  }
+
+  function requireAdmin(action) {
+    if (!isAdmin()) {
+      audit("DENIED", `${action} (admin only)`, "denied");
+      toast("Admins only.", "err");
+      return false;
+    }
+    return true;
+  }
+
+  function audit(action, detail, kind = "info") {
+    const me = selfUser();
+    DB.audit.unshift({
+      ts: new Date().toISOString(),
+      actorId: me ? me.id : "anonymous",
+      actorName: me ? me.name : "Anonymous",
+      action, detail, kind
+    });
+    DB.audit = DB.audit.slice(0, 200);
+    persist();
+  }
+
+  /* ==========================================================
+     4. Authentication flows
+     ========================================================== */
+  function showAuth() {
+    $("#appView").hidden = true;
+    $("#authView").hidden = false;
+    $("#loginPassword").value = "";
+  }
+
+  function showApp() {
+    $("#authView").hidden = true;
+    $("#appView").hidden = false;
+    VIEW.userId = SESSION.payload.sub;
+    VIEW.y = now.getFullYear();
+    VIEW.m = now.getMonth();
+    renderAll();
+    startAnim();
+  }
+
+  function setSession(token, payload) {
+    SESSION = { token, payload };
+    localStorage.setItem(SESSION_KEY, token);
+  }
+
+  function signOut(message) {
+    SESSION = null;
+    localStorage.removeItem(SESSION_KEY);
+    $$("dialog[open]").forEach(d => d.close());
+    showAuth();
+    if (message) toast(message, "info");
+  }
+
+  async function signInWithPassword(email, password) {
+    const user = DB.users.find(u => u.email.toLowerCase() === String(email).trim().toLowerCase());
+    if (!user) throw new Error("No account found for that email address.");
+    const hash = await hashPassword(password, user.salt);
+    if (hash !== user.pwHash) throw new Error("Incorrect password. Please try again.");
+
+    const { token, payload } = await signJWT({
+      sub: user.id, email: user.email, name: user.name, role: user.role, iss: "vault.local", aud: "vault-app"
+    });
+    setSession(token, payload);
+    audit("SIGN_IN", `Password sign-in as ${user.email}`);
+    showApp();
+    toast(`Welcome back, ${user.name.split(" ")[0]}`, "ok");
+  }
+
+  /* Mocked OAuth 2.0 / OIDC authorization-code flow (front-end simulation). */
+  async function signInWithGoogle(userId) {
+    const user = findUser(userId);
+    if (!user) throw new Error("Google account not linked.");
+    await sleep(650); // simulate the redirect + token exchange round trip
+
+    const { token, payload } = await signJWT({
+      sub: user.id, email: user.email, name: user.name, role: user.role,
+      iss: "https://accounts.google.com", aud: "vault-app", provider: "google-oauth2"
+    });
+    setSession(token, payload);
+    audit("SIGN_IN", `OAuth sign-in (Google) as ${user.email}`);
+    showApp();
+    toast(`Signed in with Google as ${user.name}`, "ok");
+  }
+
+  /* ==========================================================
+     5. Data selectors (scoped to the viewed user + month)
+     ========================================================== */
+  const monthKey = () => keyOf(VIEW.y, VIEW.m);
+  const inMonth  = (t) => t.date.slice(0, 7) === monthKey();
+
+  function monthStats() {
+    let income = 0, expense = 0, incomeCount = 0, expenseCount = 0;
+    for (const t of txOf(VIEW.userId)) {
+      if (!inMonth(t)) continue;
+      if ((CATS[t.category] || {}).kind === "income") { income += t.amount; incomeCount++; }
+      else { expense += t.amount; expenseCount++; }
+    }
+    return { income, expense, incomeCount, expenseCount };
+  }
+
+  function totalBalance(uid) {
+    let bal = 0;
+    for (const t of txOf(uid)) {
+      bal += (CATS[t.category] || {}).kind === "income" ? t.amount : -t.amount;
+    }
+    return bal;
+  }
+
+  function flowSeries() {
+    const out = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(VIEW.y, VIEW.m - i, 1);
+      const k = keyOf(d.getFullYear(), d.getMonth());
+      let income = 0, expense = 0;
+      for (const t of txOf(VIEW.userId)) {
+        if (t.date.slice(0, 7) !== k) continue;
+        if ((CATS[t.category] || {}).kind === "income") income += t.amount; else expense += t.amount;
+      }
+      out.push({ label: MSHORT[d.getMonth()], year: d.getFullYear(), income, expense });
+    }
+    return out;
+  }
+
+  function spendByCategory() {
+    const map = {};
+    for (const t of txOf(VIEW.userId)) {
+      if (!inMonth(t)) continue;
+      if ((CATS[t.category] || {}).kind !== "expense") continue;
+      map[t.category] = (map[t.category] || 0) + t.amount;
+    }
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value, color: (CATS[name] || {}).color || "#7c9cff" }));
+  }
+
+  /* ==========================================================
+     6. Canvas charts
+     ========================================================== */
+  function fit(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth || 0, h = canvas.clientHeight || 0;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w, h };
+  }
+
+  function niceCeil(v) {
+    if (v <= 0) return 10;
+    const exp = Math.floor(Math.log10(v));
+    const base = Math.pow(10, exp);
+    const n = v / base;
+    const steps = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+    return (steps.find(s => n <= s) ?? 10) * base;
+  }
+
+  let prog = 1, hoverIdx = -1;
+  const flowCanvas = $("#flowChart");
+  const flowTip = $("#flowTip");
+
+  function drawFlow() {
+    if (!flowCanvas.clientWidth) return;
+    const { ctx, w, h } = fit(flowCanvas);
+    ctx.clearRect(0, 0, w, h);
+
+    const data = flowSeries();
+    const pad = { l: 50, r: 16, t: 16, b: 28 };
+    const cw = w - pad.l - pad.r, ch = h - pad.t - pad.b;
+    if (cw <= 10 || ch <= 10) return;
+
+    const maxV = Math.max(...data.flatMap(d => [d.income, d.expense]), 100);
+    const top = niceCeil(maxV * 1.1);
+
+    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+    ctx.textBaseline = "middle"; ctx.textAlign = "right";
+
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.t + ch - (ch * i / 4);
+      ctx.strokeStyle = "rgba(255,255,255,.06)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.l, y + .5); ctx.lineTo(pad.l + cw, y + .5); ctx.stroke();
+      ctx.fillStyle = "#6b7789";
+      ctx.fillText(compact(top * i / 4), pad.l - 10, y);
+    }
+
+    const X = (i) => pad.l + (data.length === 1 ? cw / 2 : (cw * i) / (data.length - 1));
+    const Y = (v) => pad.t + ch - (v / top) * ch;
+
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "#6b7789";
+    data.forEach((d, i) => ctx.fillText(d.label, X(i), pad.t + ch + 10));
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad.l - 2, 0, cw * prog + 4, h); ctx.clip();
+
+    for (const s of [
+      { key: "income",  color: "#34d399", rgb: "52,211,153" },
+      { key: "expense", color: "#f87171", rgb: "248,113,113" }
+    ]) {
+      const pts = data.map((d, i) => ({ x: X(i), y: Y(d[s.key]) }));
+
+      const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+      grad.addColorStop(0, `rgba(${s.rgb},.28)`);
+      grad.addColorStop(1, `rgba(${s.rgb},0)`);
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pad.t + ch);
+      ctx.lineTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1], p1 = pts[i], cx = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cx, p0.y, cx, p1.y, p1.x, p1.y);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pad.t + ch);
+      ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1], p1 = pts[i], cx = (p0.x + p1.x) / 2;
+        ctx.bezierCurveTo(cx, p0.y, cx, p1.y, p1.x, p1.y);
+      }
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+
+      for (const p of pts) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#11151e"; ctx.fill();
+        ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    ctx.restore();
+
+    if (hoverIdx >= 0 && hoverIdx < data.length && prog > 0.99) {
+      const x = X(hoverIdx);
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,.20)";
+      ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ch); ctx.stroke();
+      ctx.restore();
+    }
+
+    flowCanvas._geom = { data, X, w, h };
+  }
+
+  flowCanvas.addEventListener("mousemove", (ev) => {
+    const g = flowCanvas._geom;
+    if (!g) return;
+    const rect = flowCanvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left;
+
+    let idx = -1, best = 44;
+    g.data.forEach((d, i) => {
+      const dx = Math.abs(g.X(i) - mx);
+      if (dx < best) { best = dx; idx = i; }
+    });
+
+    if (idx !== hoverIdx) { hoverIdx = idx; drawFlow(); }
+
+    if (idx >= 0) {
+      const d = g.data[idx];
+      flowTip.hidden = false;
+      flowTip.innerHTML =
+        `<div class="tip-m">${d.label} ${d.year}</div>
+         <div class="tip-r"><span class="dot green"></span>Income <b>${money(d.income)}</b></div>
+         <div class="tip-r"><span class="dot red"></span>Expenses <b>${money(d.expense)}</b></div>`;
+      flowTip.style.left = clamp(g.X(idx), 72, g.w - 72) + "px";
+      flowTip.style.top = "6px";
+    } else {
+      flowTip.hidden = true;
+    }
+  });
+
+  flowCanvas.addEventListener("mouseleave", () => {
+    hoverIdx = -1; flowTip.hidden = true; drawFlow();
+  });
+
+  const donutCanvas = $("#donutChart");
+
+  function drawDonut() {
+    if (!donutCanvas.clientWidth) return;
+    const { ctx, w, h } = fit(donutCanvas);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) / 2 - 6;
+    const lw = Math.max(14, R * 0.28);
+    const r = R - lw / 2;
+
+    const items = spendByCategory();
+    const total = items.reduce((a, b) => a + b.value, 0);
+
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,.06)"; ctx.lineWidth = lw; ctx.stroke();
+
+    if (total > 0) {
+      const gap = items.length > 1 ? 0.025 : 0;
+      const limit = -Math.PI / 2 + Math.PI * 2 * prog;
+      let a0 = -Math.PI / 2;
+
+      for (const it of items) {
+        const a1 = a0 + Math.PI * 2 * (it.value / total);
+        const s = a0 + gap / 2, e = Math.min(a1 - gap / 2, limit);
+        if (e > s) {
+          ctx.beginPath(); ctx.arc(cx, cy, r, s, e);
+          ctx.strokeStyle = it.color; ctx.lineWidth = lw; ctx.stroke();
+        }
+        a0 = a1;
+      }
+    }
+
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e8edf5";
+    ctx.font = `650 ${Math.round(R * 0.30)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillText(compact(total), cx, cy - R * 0.06);
+    ctx.fillStyle = "#6b7789";
+    ctx.font = `500 ${Math.round(R * 0.145)}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillText("spent", cx, cy + R * 0.28);
+  }
+
+  function startAnim() {
+    const t0 = performance.now(), dur = 780;
+    (function step() {
+      const p = Math.min(1, (performance.now() - t0) / dur);
+      prog = 1 - Math.pow(1 - p, 3);
+      drawFlow(); drawDonut();
+      if (p < 1) requestAnimationFrame(step);
+    })();
+  }
+
+  /* ==========================================================
+     7. Renderers
+     ========================================================== */
+  function renderHeader() {
+    const me = selfUser();
+    if (!me) return;
+
+    const initials = me.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    $("#avatar").textContent = initials;
+    $("#userName").textContent = me.name;
+    $("#userRole").innerHTML = `<span class="role-badge ${me.role}">${me.role}</span>`;
+    $("#footerEmail").textContent = me.email;
+
+    const vu = viewUser();
+    $("#brandSub").textContent = (vu && vu.id !== me.id)
+      ? `Viewing ${vu.name}'s data`
+      : "Personal finance dashboard";
+
+    /* Admin: user switcher */
+    const sw = $("#userSwitch");
+    if (isAdmin()) {
+      sw.hidden = false;
+      sw.innerHTML = DB.users.map(u =>
+        `<option value="${u.id}" ${u.id === VIEW.userId ? "selected" : ""}>${esc(u.name)}${u.id === me.id ? " (you)" : ""}</option>`
+      ).join("");
+    } else {
+      sw.hidden = true;
+    }
+
+    /* Budget edit button — admin only (RBAC-visible control) */
+    $("#editBudgetsBtn").hidden = !isAdmin();
+    $("#budgetSub").textContent = isAdmin()
+      ? "Monthly limits · editable (admin)"
+      : "Monthly limits · read-only";
+  }
+
+  function renderKpis() {
+    const s = monthStats();
+    const bal = totalBalance(VIEW.userId);
+    const rate = s.income > 0 ? ((s.income - s.expense) / s.income) * 100 : 0;
+
+    $("#kpiBalance").textContent = money(bal);
+    $("#kpiBalance").className = "kpi-value " + (bal >= 0 ? "" : "red");
+
+    $("#kpiIncome").textContent  = money(s.income);
+    $("#kpiExpense").textContent = money(s.expense);
+    $("#kpiIncomeSub").textContent  = `${s.incomeCount} income ${s.incomeCount === 1 ? "entry" : "entries"}`;
+    $("#kpiExpenseSub").textContent = `${s.expenseCount} expense ${s.expenseCount === 1 ? "entry" : "entries"}`;
+
+    const rateEl = $("#kpiRate");
+    rateEl.textContent = (rate >= 0 ? "" : "−") + Math.abs(rate).toFixed(0) + "%";
+    rateEl.className = "kpi-value " + (rate >= 0 ? "green" : "red");
+    $("#kpiRateBar").style.width = clamp(rate, 0, 100) + "%";
+  }
+
+  function renderDonutLegend() {
+    const items = spendByCategory();
+    const total = items.reduce((a, b) => a + b.value, 0);
+    const el = $("#donutLegend");
+
+    if (!items.length) {
+      el.innerHTML = `<p class="empty">No spending recorded yet.</p>`;
+      return;
+    }
+    el.innerHTML = items.map(it => `
+      <div class="lg-row">
+        <span class="lg-dot" style="background:${it.color}"></span>
+        <span class="lg-name">${esc(it.name)}</span>
+        <span class="lg-val">${money(it.value)}</span>
+        <span class="lg-pct">${((it.value / total) * 100).toFixed(0)}%</span>
+      </div>`).join("");
+  }
+
+  function renderBudgets() {
+    const budget = budgetOf(VIEW.userId);
+    const spent = {};
+    for (const t of txOf(VIEW.userId)) {
+      if (!inMonth(t)) continue;
+      if ((CATS[t.category] || {}).kind !== "expense") continue;
+      spent[t.category] = (spent[t.category] || 0) + t.amount;
+    }
+
+    const rows = Object.entries(budget);
+    const el = $("#budgets");
+    if (!rows.length) { el.innerHTML = `<p class="empty">No budgets configured.</p>`; return; }
+
+    el.innerHTML = rows.map(([name, limit]) => {
+      const used = spent[name] || 0;
+      const pct = limit > 0 ? (used / limit) * 100 : 0;
+      const color = pct > 100 ? "#f87171" : pct > 80 ? "#f7b955" : "#34d399";
+      return `
+        <div class="bud-row">
+          <div class="bud-top">
+            <span>${esc(name)}</span>
+            <span><b>${money(used)}</b> <span class="of">/ ${money(limit)}</span></span>
+          </div>
+          <div class="bar"><div class="bar-fill" style="width:${clamp(pct, 0, 100)}%;background:${color}"></div></div>
+        </div>`;
+    }).join("");
+  }
+
+  function renderTransactions() {
+    const q = $("#txSearch").value.trim().toLowerCase();
+    const cat = $("#txFilter").value;
+
+    const all = txOf(VIEW.userId).filter(inMonth);
+    const list = all
+      .filter(t => (!q || t.desc.toLowerCase().includes(q)) && (!cat || t.category === cat))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+    $("#txCount").textContent =
+      `${list.length} of ${all.length} · ${MONTHS[VIEW.m]} ${VIEW.y}`;
+
+    const el = $("#txList");
+    if (!list.length) {
+      el.innerHTML = `<p class="empty">${all.length ? "No matches for this filter." : "Nothing here yet — add your first transaction."}</p>`;
+      return;
+    }
+
+    el.innerHTML = list.map(t => {
+      const d = new Date(t.date + "T00:00:00");
+      const isIncome = (CATS[t.category] || {}).kind === "income";
+      return `
+        <div class="tx">
+          <span class="tx-date">${MSHORT[d.getMonth()]} ${d.getDate()}</span>
+          <div class="tx-main">
+            <span class="tx-desc">${esc(t.desc)}</span>
+            <span class="tx-cat">${esc(t.category)}</span>
+          </div>
+          <span class="tx-amt ${isIncome ? "green" : ""}">${isIncome ? "+" : "−"}${money(t.amount, 2)}</span>
+          <div class="tx-actions">
+            <button class="icon-btn edit" data-id="${t.id}" title="Edit" aria-label="Edit transaction">✎</button>
+            <button class="icon-btn del"  data-id="${t.id}" title="Delete" aria-label="Delete transaction">×</button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function renderAll() {
+    if (!SESSION) return;
+    $("#monthLabel").textContent = `${MONTHS[VIEW.m]} ${VIEW.y}`;
+    renderHeader();
+    renderKpis();
+    renderDonutLegend();
+    renderBudgets();
+    renderTransactions();
+    drawFlow();
+    drawDonut();
+  }
+
+  /* ==========================================================
+     8. Transaction CRUD
+     ========================================================== */
+  const txDialog = $("#txDialog");
+  let editingId = null;
+
+  function buildCategoryOptions() {
+    const groups = { expense: [], income: [] };
+    Object.entries(CATS).forEach(([name, meta]) => groups[meta.kind].push(name));
+    $("#txCat").innerHTML =
+      `<optgroup label="Expense">${groups.expense.map(n => `<option>${n}</option>`).join("")}</optgroup>` +
+      `<optgroup label="Income">${groups.income.map(n => `<option>${n}</option>`).join("")}</optgroup>`;
+
+    $("#txFilter").innerHTML =
+      `<option value="">All categories</option>` +
+      Object.keys(CATS).map(c => `<option value="${c}">${c}</option>`).join("");
+  }
+
+  function openTxDialog(tx = null) {
+    editingId = tx ? tx.id : null;
+
+    $("#txDialogTitle").textContent = tx ? "Edit transaction" : "Add transaction";
+    $("#txDialogSub").textContent = tx
+      ? "Update the details below."
+      : "Record money coming in or going out.";
+    $("#saveTxBtn").textContent = tx ? "Save changes" : "Add transaction";
+
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    $("#txDesc").value   = tx ? tx.desc : "";
+    $("#txAmount").value = tx ? tx.amount : "";
+    $("#txDate").value   = tx ? tx.date : iso;
+    $("#txCat").value    = tx ? tx.category : "Food";
+
+    txDialog.showModal();
+    $("#txDesc").focus();
+  }
+
+  $("#txForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!authorize(editingId ? "edit-transaction" : "create-transaction", VIEW.userId)) return;
+
+    const desc = $("#txDesc").value.trim();
+    const amount = parseFloat($("#txAmount").value);
+    const date = $("#txDate").value;
+    const category = $("#txCat").value;
+    if (!desc || !isFinite(amount) || amount <= 0 || !date) return;
+
+    const list = DB.transactions[VIEW.userId] || (DB.transactions[VIEW.userId] = []);
+
+    if (editingId) {
+      const tx = list.find(t => t.id === editingId);
+      if (!tx) return;
+      Object.assign(tx, { desc, amount: Math.round(amount * 100) / 100, date, category });
+      audit("UPDATE", `Transaction "${desc}" → ${money(amount, 2)}`);
+      toast("Transaction updated", "ok");
+    } else {
+      list.push({ id: rid(), desc, amount: Math.round(amount * 100) / 100, date, category });
+      audit("CREATE", `Transaction "${desc}" ${money(amount, 2)} (${category})`);
+      toast("Transaction added", "ok");
+    }
+
+    persist();
+    const [y, m] = date.split("-").map(Number);
+    VIEW.y = y; VIEW.m = m - 1;
+
+    txDialog.close();
+    $("#txForm").reset();
+    editingId = null;
+    renderAll();
+  });
+
+  $("#cancelTx").addEventListener("click", () => { editingId = null; txDialog.close(); });
+  $("#openDialog").addEventListener("click", () => openTxDialog(null));
+
+  $("#txList").addEventListener("click", (ev) => {
+    const editBtn = ev.target.closest(".edit");
+    const delBtn  = ev.target.closest(".del");
+
+    if (editBtn) {
+      const tx = txOf(VIEW.userId).find(t => t.id === editBtn.dataset.id);
+      if (tx) openTxDialog(tx);
+      return;
+    }
+
+    if (delBtn) {
+      if (!authorize("delete-transaction", VIEW.userId)) return;
+      const tx = txOf(VIEW.userId).find(t => t.id === delBtn.dataset.id);
+      if (!tx) return;
+      if (!confirm(`Delete "${tx.desc}"?`)) return;
+
+      DB.transactions[VIEW.userId] = txOf(VIEW.userId).filter(t => t.id !== tx.id);
+      persist();
+      audit("DELETE", `Transaction "${tx.desc}" ${money(tx.amount, 2)}`);
+      toast("Transaction deleted", "warn");
+      renderAll();
+    }
+  });
+
+  $("#txSearch").addEventListener("input", renderTransactions);
+  $("#txFilter").addEventListener("change", renderTransactions);
+
+  /* ==========================================================
+     9. Budget CRUD (admin only — RBAC demo)
+     ========================================================== */
+  const budgetDialog = $("#budgetDialog");
+
+  $("#editBudgetsBtn").addEventListener("click", () => {
+    if (!requireAdmin("edit-budgets")) return;
+
+    const budget = budgetOf(VIEW.userId);
+    $("#budgetOwner").textContent = viewUser()?.name ?? "—";
+    $("#budgetFields").innerHTML = EXPENSE_CATS.map(c => `
+      <div class="field">
+        <label for="bud-${c}">${c}</label>
+        <input id="bud-${c}" type="number" min="0" step="1" value="${budget[c] ?? 0}" data-cat="${c}">
+      </div>`).join("");
+    budgetDialog.showModal();
+  });
+
+  $("#budgetForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!requireAdmin("edit-budgets")) return;
+
+    const next = {};
+    $$("#budgetFields input").forEach(inp => {
+      next[inp.dataset.cat] = Math.max(0, Number(inp.value) || 0);
+    });
+    DB.budgets[VIEW.userId] = next;
+    persist();
+    audit("UPDATE", `Budgets updated for ${viewUser()?.email}`);
+    budgetDialog.close();
+    toast("Budgets saved", "ok");
+    renderAll();
+  });
+
+  $("#cancelBudgets").addEventListener("click", () => budgetDialog.close());
+
+  /* ==========================================================
+     10. Account / session dialog
+     ========================================================== */
+  const accountDialog = $("#accountDialog");
+
+  $("#accountBtn").addEventListener("click", () => {
+    const me = selfUser();
+    if (!me) return;
+
+    $("#acctAvatar").textContent = me.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+    $("#acctName").textContent = me.name;
+    $("#acctEmail").textContent = me.email;
+    $("#acctRole").innerHTML = `<span class="role-badge ${me.role}">${me.role}</span>`;
+    $("#acctId").textContent = me.id;
+    $("#acctExp").textContent = new Date(SESSION.payload.exp * 1000).toLocaleTimeString();
+    $("#acctPayload").textContent = JSON.stringify(SESSION.payload, null, 2);
+    $("#acctToken").textContent = SESSION.token;
+    $("#openAdminBtn").hidden = !isAdmin();
+
+    accountDialog.showModal();
+  });
+
+  $("#closeAccount").addEventListener("click", () => accountDialog.close());
+  $("#signOutBtn").addEventListener("click", () => signOut("Signed out"));
+  $("#signOutInline").addEventListener("click", () => signOut("Signed out"));
+
+  /* ==========================================================
+     11. Admin panel — user management + audit log
+     ========================================================== */
+  const adminDialog = $("#adminDialog");
+
+  function renderAdminPanel() {
+    const me = selfUser();
+
+    $("#adminUserRows").innerHTML = DB.users.map(u => {
+      const bal = totalBalance(u.id);
+      const count = txOf(u.id).length;
+      const isMe = u.id === me.id;
+      return `
+        <tr>
+          <td>
+            <div class="u-cell">
+              <span class="avatar">${u.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}</span>
+              <span>${esc(u.name)}${isMe ? " <span class='lg-pct'>(you)</span>" : ""}</span>
+            </div>
+          </td>
+          <td style="color:var(--muted)">${esc(u.email)}</td>
+          <td>
+            <select data-uid="${u.id}" class="roleSel" ${isMe ? "disabled" : ""}>
+              <option value="user"  ${u.role === "user"  ? "selected" : ""}>user</option>
+              <option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option>
+            </select>
+          </td>
+          <td>${count}</td>
+          <td class="${bal >= 0 ? "" : "red"}">${money(bal)}</td>
+          <td style="text-align:right">
+            <button class="icon-btn view" data-uid="${u.id}" title="View data">👁</button>
+            <button class="icon-btn del"  data-uid="${u.id}" title="Delete user" ${isMe ? "disabled style='opacity:.25'" : ""}>×</button>
+          </td>
+        </tr>`;
+    }).join("");
+
+    const logs = DB.audit.slice(0, 60);
+    $("#auditList").innerHTML = logs.length ? logs.map(l => {
+      const d = new Date(l.ts);
+      const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      return `
+        <div class="log-row">
+          <span class="log-time">${time}</span>
+          <div class="log-body">
+            <b>${esc(l.actorName)}</b>
+            <span class="${l.kind === "denied" ? "deny" : ""}">${esc(l.action)}</span>
+            <span>— ${esc(l.detail)}</span>
+          </div>
+        </div>`;
+    }).join("") : `<p class="empty">No activity yet.</p>`;
+  }
+
+  $("#openAdminBtn").addEventListener("click", () => {
+    if (!requireAdmin("open-admin-panel")) return;
+    accountDialog.close();
+    renderAdminPanel();
+    adminDialog.showModal();
+  });
+
+  $("#closeAdmin").addEventListener("click", () => adminDialog.close());
+
+  $("#adminUserRows").addEventListener("change", (ev) => {
+    const sel = ev.target.closest(".roleSel");
+    if (!sel) return;
+    if (!requireAdmin("change-role")) { renderAdminPanel(); return; }
+
+    const uid = sel.dataset.uid;
+    const target = findUser(uid);
+    if (!target) return;
+    if (target.id === selfUser().id) { toast("You can't change your own role.", "warn"); renderAdminPanel(); return; }
+
+    target.role = sel.value;
+    persist();
+    audit("UPDATE", `Role for ${target.email} → ${target.role}`);
+    toast(`${target.name} is now ${target.role}`, "ok");
+    renderAdminPanel();
+    renderAll();
+  });
+
+  $("#adminUserRows").addEventListener("click", (ev) => {
+    const viewBtn = ev.target.closest(".view");
+    const delBtn  = ev.target.closest(".del");
+
+    if (viewBtn) {
+      if (!requireAdmin("view-user-data")) return;
+      VIEW.userId = viewBtn.dataset.uid;
+      adminDialog.close();
+      renderAll();
+      toast(`Now viewing ${viewUser()?.name}'s data`, "info");
+      return;
+    }
+
+    if (delBtn) {
+      if (!requireAdmin("delete-user")) return;
+      const uid = delBtn.dataset.uid;
+      const target = findUser(uid);
+      if (!target) return;
+      if (target.id === selfUser().id) { toast("You can't delete your own account.", "warn"); return; }
+      if (!confirm(`Delete ${target.name} and all of their data? This cannot be undone.`)) return;
+
+      DB.users = DB.users.filter(u => u.id !== uid);
+      delete DB.transactions[uid];
+      delete DB.budgets[uid];
+      persist();
+      audit("DELETE", `User ${target.email} removed`);
+      if (VIEW.userId === uid) VIEW.userId = selfUser().id;
+      toast(`${target.name} deleted`, "warn");
+      renderAdminPanel();
+      renderAll();
+    }
+  });
+
+  $("#userSwitch").addEventListener("change", (ev) => {
+    if (!requireAdmin("switch-user-view")) return;
+    VIEW.userId = ev.target.value;
+    renderAll();
+    toast(`Viewing ${viewUser()?.name}`, "info");
+  });
+
+  /* ==========================================================
+     12. Third-party API — Stripe test-mode checkout
+     ========================================================== */
+  const payDialog = $("#payDialog");
+  let stripeInstance = null;
+  let stripeCard = null;
+
+  const stripeKey = () => localStorage.getItem(STRIPE_PK_KEY) || "";
+
+  function loadStripeJs() {
+    return new Promise((resolve, reject) => {
+      if (window.Stripe) return resolve(window.Stripe);
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/";
+      s.onload = () => resolve(window.Stripe);
+      s.onerror = () => reject(new Error("Could not load Stripe.js"));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function setupStripe() {
+    const pk = stripeKey();
+    const note = $("#stripeNote");
+    const mount = $("#stripeElementMount");
+    const cardFields = $("#cardFields");
+
+    mount.innerHTML = "";
+    stripeCard = null;
+
+    if (pk && /^pk_(test|live)_/.test(pk)) {
+      note.innerHTML = `Live Stripe.js mode — card data is tokenized by Stripe's API using your publishable key
+        (<code>${esc(pk.slice(0, 12))}…</code>). The charge itself is simulated, since creating a PaymentIntent
+        requires your secret key on a server.`;
+      try {
+        const Stripe = await loadStripeJs();
+        stripeInstance = Stripe(pk);
+        const elements = stripeInstance.elements();
+        stripeCard = elements.create("card", {
+          style: { base: { color: "#e8edf5", fontSize: "14px", "::placeholder": { color: "#5a6b86" } } }
+        });
+        const holder = document.createElement("div");
+        holder.style.cssText = "padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel2);margin-bottom:14px";
+        mount.appendChild(holder);
+        stripeCard.mount(holder);
+        cardFields.hidden = true;
+        return;
+      } catch (err) {
+        console.warn("Stripe.js unavailable, falling back to simulation:", err);
+        mount.innerHTML = "";
+        stripeCard = null;
+        cardFields.hidden = false;
+      }
+    }
+
+    note.innerHTML = `Simulated gateway — no network calls are made. Use <code>4242 4242 4242 4242</code> for success
+      or <code>4000 0000 0000 0002</code> for a decline. Add a <code>pk_test_…</code> key to tokenize real cards via Stripe.js.`;
+  }
+
+  function fmtCardNumber(v) {
+    return v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+  }
+  function fmtExpiry(v) {
+    const d = v.replace(/\D/g, "").slice(0, 4);
+    return d.length > 2 ? d.slice(0, 2) + " / " + d.slice(2) : d;
+  }
+
+  $("#cardNumber").addEventListener("input", e => { e.target.value = fmtCardNumber(e.target.value); });
+  $("#cardExp").addEventListener("input", e => { e.target.value = fmtExpiry(e.target.value); });
+  $("#cardCvc").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+
+  $("#payAmt").addEventListener("input", e => {
+    const v = parseFloat(e.target.value) || 0;
+    $("#payAmountLabel").textContent = money(v, 2);
+  });
+
+  $("#payBillBtn").addEventListener("click", () => {
+    if (!authorize("create-payment", VIEW.userId)) return;
+    $("#payForm").hidden = false;
+    $("#payState").hidden = true;
+    $("#payAmountLabel").textContent = money(parseFloat($("#payAmt").value) || 0, 2);
+    setupStripe();
+    payDialog.showModal();
+  });
+
+  $("#cancelPay").addEventListener("click", () => payDialog.close());
+
+  /* Simulated PaymentIntent charge — the server-side half of the flow. */
+  async function chargeCard({ tokenId, amount, description }) {
+    await sleep(1200);
+    if (tokenId.startsWith("tok_declined")) {
+      return { ok: false, error: { code: "card_declined", message: "Your card was declined." } };
+    }
+    return {
+      ok: true,
+      paymentIntent: {
+        id: "pi_" + rid() + rid(),
+        object: "payment_intent",
+        amount: Math.round(amount * 100),
+        currency: "usd",
+        description,
+        status: "succeeded",
+        payment_method: tokenId,
+        livemode: false,
+        created: Math.floor(Date.now() / 1000)
+      }
+    };
+  }
+
+  /* SendGrid v3 Mail Send — payload shape is real, delivery is simulated. */
+  function buildSendGridPayload(toEmail, receipt) {
+    return {
+      personalizations: [{
+        to: [{ email: toEmail }],
+        dynamic_template_data: {
+          description: receipt.description,
+          amount: money(receipt.amount, 2),
+          payment_id: receipt.id,
+          date: new Date().toLocaleDateString("en-US", { dateStyle: "medium" })
+        }
+      }],
+      from: { email: "receipts@vault.app", name: "Vault" },
+      reply_to: { email: "support@vault.app", name: "Vault Support" },
+      template_id: "d-8f2c1a7b4e9d4c0aa61f",
+      subject: `Your receipt for ${receipt.description}`
+    };
+  }
+
+  $("#payForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!authorize("create-payment", VIEW.userId)) return;
+
+    const description = $("#payDesc").value.trim() || "Bill payment";
+    const amount = parseFloat($("#payAmt").value);
+    if (!isFinite(amount) || amount <= 0) { toast("Enter a valid amount", "err"); return; }
+
+    const stateEl = $("#payState");
+    const formEl = $("#payForm");
+
+    formEl.hidden = true;
+    stateEl.hidden = false;
+    stateEl.innerHTML = `
+      <div class="pay-state">
+        <div class="spinner"></div>
+        <div><b>Processing payment…</b><br><span style="color:var(--muted);font-size:12px">Contacting payment gateway</span></div>
+      </div>`;
+
+    let tokenId = "tok_simulated_visa";
+    let stripeError = null;
+
+    /* Real Stripe.js tokenization when a publishable key is configured. */
+    if (stripeInstance && stripeCard) {
+      const { token, error } = await stripeInstance.createToken(stripeCard);
+      if (error) stripeError = error;
+      else tokenId = token.id;
+    } else {
+      const raw = $("#cardNumber").value.replace(/\s/g, "");
+      if (raw === "4000000000000002") tokenId = "tok_declined";
+      else if (raw.length < 15) stripeError = { message: "Your card number is incomplete." };
+      else if ($("#cardExp").value.replace(/\D/g, "").length < 4) stripeError = { message: "Your card's expiry date is incomplete." };
+      else if ($("#cardCvc").value.length < 3) stripeError = { message: "Your card's security code is incomplete." };
+    }
+
+    if (stripeError) {
+      stateEl.innerHTML = `
+        <div class="pay-state">
+          <div class="pay-bad">✕</div>
+          <div><b>Payment failed</b><br><span style="color:var(--muted);font-size:12px">${esc(stripeError.message)}</span></div>
+          <button class="btn" type="button" id="payRetry">Try again</button>
+        </div>`;
+      $("#payRetry").addEventListener("click", () => { stateEl.hidden = true; formEl.hidden = false; });
+      return;
+    }
+
+    const result = await chargeCard({ tokenId, amount, description });
+
+    if (!result.ok) {
+      audit("PAYMENT_FAILED", `${money(amount, 2)} — ${result.error.code}`);
+      stateEl.innerHTML = `
+        <div class="pay-state">
+          <div class="pay-bad">✕</div>
+          <div><b>Card declined</b><br>
+            <span style="color:var(--muted);font-size:12px">${esc(result.error.message)}</span></div>
+          <button class="btn" type="button" id="payRetry">Try another card</button>
+        </div>`;
+      $("#payRetry").addEventListener("click", () => { stateEl.hidden = true; formEl.hidden = false; });
+      toast("Payment declined", "err");
+      return;
+    }
+
+    /* Persist the payment as an expense transaction for the viewed user. */
+    const pi = result.paymentIntent;
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const list = DB.transactions[VIEW.userId] || (DB.transactions[VIEW.userId] = []);
+    list.push({
+      id: rid(),
+      date: iso,
+      desc: description,
+      category: "Bills",
+      amount: Math.round(amount * 100) / 100,
+      source: "stripe",
+      paymentId: pi.id
+    });
+    persist();
+    audit("PAYMENT", `${money(amount, 2)} — ${description} (${pi.id})`);
+
+    stateEl.innerHTML = `
+      <div class="pay-state">
+        <div class="pay-ok">✓</div>
+        <div><b>Payment successful</b><br>
+          <span style="color:var(--muted);font-size:12px">${esc(description)} · ${money(amount, 2)}</span></div>
+      </div>
+      <dl class="kv" style="margin-top:4px">
+        <dt>PaymentIntent</dt><dd style="font-size:11px">${esc(pi.id)}</dd>
+        <dt>Token</dt><dd style="font-size:11px">${esc(pi.payment_method)}</dd>
+        <dt>Status</dt><dd><span class="green">${esc(pi.status)}</span></dd>
+      </dl>
+      <details>
+        <summary>SendGrid receipt payload</summary>
+        <div class="code" id="sgPayload"></div>
+      </details>
+      <div class="sheet-actions">
+        <button class="btn" type="button" id="payEmailBtn">Email receipt</button>
+        <button class="btn primary" type="button" id="payDoneBtn">Done</button>
+      </div>`;
+
+    toast("Payment successful", "ok");
+
+    const sgPayload = buildSendGridPayload(selfUser().email, {
+      description, amount, id: pi.id
+    });
+    $("#sgPayload").textContent = JSON.stringify(sgPayload, null, 2);
+
+    $("#payEmailBtn").addEventListener("click", (btnEv) => {
+      const btn = btnEv.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      console.log("[SendGrid v3 POST /mail/send] simulated request body:", sgPayload);
+      setTimeout(() => {
+        btn.textContent = "Receipt sent ✓";
+        audit("EMAIL", `Receipt sent to ${selfUser().email} via SendGrid (simulated)`);
+        toast("Receipt email queued via SendGrid (simulated)", "ok");
+      }, 900);
+    });
+
+    $("#payDoneBtn").addEventListener("click", () => {
+      payDialog.close();
+      renderAll();
+    });
+  });
+
+  /* ==========================================================
+     13. Month navigation
+     ========================================================== */
+  $("#prevMonth").addEventListener("click", () => {
+    VIEW.m--;
+    if (VIEW.m < 0) { VIEW.m = 11; VIEW.y--; }
+    hoverIdx = -1; flowTip.hidden = true;
+    renderAll();
+  });
+
+  $("#nextMonth").addEventListener("click", () => {
+    VIEW.m++;
+    if (VIEW.m > 11) { VIEW.m = 0; VIEW.y++; }
+    hoverIdx = -1; flowTip.hidden = true;
+    renderAll();
+  });
+
+  /* ==========================================================
+     14. Auth screen events
+     ========================================================== */
+  $("#loginForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const errEl = $("#authError");
+    const btn = $("#loginBtn");
+    errEl.hidden = true;
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+
+    try {
+      await signInWithPassword($("#loginEmail").value, $("#loginPassword").value);
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.hidden = false;
+      btn.disabled = false;
+      btn.textContent = "Sign in";
+    }
+  });
+
+  $$(".chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      $("#loginEmail").value = chip.dataset.email;
+      $("#loginPassword").value = chip.dataset.pw;
+      $("#authError").hidden = true;
+      $("#loginBtn").focus();
+    });
+  });
+
+  /* Mock Google account chooser (simulated OAuth 2.0 consent screen). */
+  $("#googleBtn").addEventListener("click", async () => {
+    const list = DB.users.map((u, i) =>
+      `${i + 1}. ${u.name} — ${u.email} ${u.role === "admin" ? "(admin)" : ""}`).join("\n");
+
+    const choice = prompt(
+      "Google — Choose an account\n\n" + list + "\n\nEnter the number of the account to continue:",
+      "2"
+    );
+    if (choice === null) return;
+
+    const idx = parseInt(choice, 10) - 1;
+    const user = DB.users[idx];
+    if (!user) { toast("No account selected", "warn"); return; }
+
+    const btn = $("#googleBtn");
+    btn.disabled = true;
+    btn.textContent = "Connecting to Google…";
+    try {
+      await signInWithGoogle(user.id);
+    } catch (err) {
+      toast(err.message, "err");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v9h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.4z"/>
+        <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.2v5.7C7.8 41.1 15.3 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.6 28.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.2C2.8 17.1 2 20.4 2 24s.8 6.9 2.2 9.8l7.4-5.7z"/>
+        <path fill="#EA4335" d="M24 10.8c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.2 30 2 24 2 15.3 2 7.8 6.9 4.2 14.2l7.4 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/></svg>
+        Continue with Google`;
+    }
+  });
+
+  /* ==========================================================
+     15. Misc events
+     ========================================================== */
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { drawFlow(); drawDonut(); }, 120);
+  });
+
+  $$("dialog").forEach(d => {
+    d.addEventListener("click", (ev) => {
+      if (ev.target === d) d.close(); // backdrop click
+    });
+  });
+
+  /* ==========================================================
+     16. Boot
+     ========================================================== */
+  (async function boot() {
+    await ensureDB();
+    buildCategoryOptions();
+    $("#payAmountLabel").textContent = money(parseFloat($("#payAmt").value) || 0, 2);
+
+    const token = localStorage.getItem(SESSION_KEY);
+    if (token) {
+      try {
+        const payload = await verifyJWT(token);
+        if (findUser(payload.sub)) {
+          setSession(token, payload);
+          showApp();
+          return;
+        }
+        localStorage.removeItem(SESSION_KEY);
+      } catch (err) {
+        console.warn("Stored session rejected:", err.message);
+        localStorage.removeItem(SESSION_KEY);
+      }
+    }
+    showAuth();
+  })();
+})();
+</script>
+</body>
+        </html>
