@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vault — Personal Finance Dashboard</title>
+
+<!-- ===== PWA head ===== -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0a0d13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vault">
+<link rel="apple-touch-icon" href="./icon-192.png">
+
 <style>
   :root{
     --bg:#0a0d13; --panel:#11151e; --panel2:#0d1119; --border:#1e2634; --text:#e8edf5;
@@ -865,6 +874,7 @@
     VIEW.m = now.getMonth();
     renderAll();
     startAnim();
+    runPendingAction();
   }
 
   function setSession(token, payload) {
@@ -909,6 +919,22 @@
     audit("SIGN_IN", `OAuth sign-in (Google) as ${user.email}`);
     showApp();
     toast(`Signed in with Google as ${user.name}`, "ok");
+  }
+
+  /* ==========================================================
+     4b. PWA shortcut actions (?action=add | ?action=pay)
+     ========================================================== */
+  let pendingAction = new URLSearchParams(location.search).get("action");
+
+  function runPendingAction() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    pendingAction = null;
+
+    try { history.replaceState(null, "", location.pathname); } catch {}
+
+    if (action === "add") $("#openDialog").click();
+    if (action === "pay") $("#payBillBtn").click();
   }
 
   /* ==========================================================
@@ -1961,5 +1987,68 @@
   })();
 })();
 </script>
+
+<!-- ============================ PWA REGISTRATION ============================ -->
+<script>
+(() => {
+  if (!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', async () => {
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    } catch (err) {
+      console.warn('[pwa] registration failed', err);
+      return;
+    }
+
+    // Reload exactly once when a new worker takes control.
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
+
+    const promptUpdate = (worker) => {
+      const stack = document.getElementById('toasts');
+      if (!stack || stack.querySelector('[data-update]')) return;
+
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.dataset.update = '1';
+      el.style.cssText = 'display:flex;align-items:center;gap:12px;border-left-color:#6c8cff';
+
+      const label = document.createElement('span');
+      label.textContent = 'A new version of Vault is available.';
+
+      const btn = document.createElement('button');
+      btn.className = 'btn primary';
+      btn.style.cssText = 'font-size:11.5px;padding:5px 11px;border-radius:8px';
+      btn.textContent = 'Reload';
+      btn.addEventListener('click', () => {
+        el.remove();
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      });
+
+      el.append(label, btn);
+      stack.appendChild(el);
+    };
+
+    const watch = (worker) => {
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          promptUpdate(worker);
+        }
+      });
+    };
+
+    if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
+    watch(reg.installing);
+    reg.addEventListener('updatefound', () => watch(reg.installing));
+  });
+})();
+</script>
 </body>
-        </html>
+                                         </html>
