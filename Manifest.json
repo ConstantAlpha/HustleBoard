@@ -1,0 +1,47 @@
+{
+  "id": "/vault/",
+  "name": "Vault — Personal Finance Dashboard",
+  "short_name": "Vault",
+  "description": "Track cash flow, budgets, and transactions with role-based team access and Stripe test payments.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0d13",
+  "theme_color": "#0a0d13",
+  "categories": ["finance", "productivity", "utilities"],
+  "launch_handler": { "client_mode": "focus-existing" },
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add transaction",
+      "short_name": "Add",
+      "description": "Record a new income or expense entry",
+      "url": "./?action=add",
+      "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Pay a bill",
+      "short_name": "Pay",
+      "description": "Open the Stripe test-mode payment sheet",
+      "url": "./?action=pay",
+      "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}
